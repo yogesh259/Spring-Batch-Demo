@@ -12,11 +12,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.time.ZoneId;
 
-/**
- * Runs the job every night (cron and zone come from application.properties).
- * Turn it off with reconciliation.scheduler.enabled=false, e.g. when an external
- * scheduler (Kubernetes CronJob) starts the job instead.
- */
+/** Nightly trigger. Disable with reconciliation.scheduler.enabled=false when an external scheduler runs the job. */
 @Component
 @ConditionalOnProperty(name = "reconciliation.scheduler.enabled", havingValue = "true", matchIfMissing = true)
 public class ReconciliationScheduler {
@@ -34,8 +30,7 @@ public class ReconciliationScheduler {
 
     @Scheduled(cron = "${reconciliation.cron}", zone = "${reconciliation.zone}")
     public void runNightly() throws Exception {
-        // Reconcile yesterday. A new date every night = a new run every night;
-        // the same date again = resume that night's run if it failed.
+        // One JobInstance per business date: a failed date resumes, a completed one is not rerun.
         JobParameters params = new JobParametersBuilder()
                 .addString("businessDate", LocalDate.now(zone).minusDays(1).toString())
                 .toJobParameters();

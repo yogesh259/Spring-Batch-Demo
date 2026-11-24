@@ -28,22 +28,12 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * The whole job:
- *
- *   reconciliationJob
- *     1. reconcileManagerStep  -> runs reconcileStep once per branch, in parallel
- *          reconcileStep       -> reader -> processor -> writer, in chunks
- *     2. summaryStep           -> tasklet: count results by status
- */
 @Configuration
 public class ReconciliationJobConfig {
 
-    /** Reader page size and step chunk size, kept equal. 3 for the demo, ~1000 in production. */
+    /** Used as both chunk size and reader page size, so each chunk reads exactly one page. */
     @Value("${batch.chunk-size}")
     private int chunkSize;
-
-    // ---------------------------------------------------------------- job
 
     @Bean
     public Job reconciliationJob(JobRepository jobRepository,
@@ -57,13 +47,7 @@ public class ReconciliationJobConfig {
                 .build();
     }
 
-    // ---------------------------------------------------------------- step 1: reconcile
-
-    /**
-     * Reads one branch's transactions for one business date.
-     * {@code @StepScope}: a new reader per partition, created when that partition starts,
-     * so it can receive the job parameter and its own branch (late binding).
-     */
+    /** Step-scoped: one reader per partition, bound to that partition's branch and the job's business date. */
     @Bean
     @StepScope
     public JpaPagingItemReader<BankTransaction> reader(
@@ -71,13 +55,13 @@ public class ReconciliationJobConfig {
             @Value("#{jobParameters['businessDate']}") String businessDate,
             @Value("#{stepExecutionContext['branch']}") String branch) {
         return new JpaPagingItemReaderBuilder<BankTransaction>()
-                .name("bankTransactionReader")              // key for its saved position (restart)
+                .name("bankTransactionReader")
                 .entityManagerFactory(entityManagerFactory)
                 .queryString("""
                         SELECT t FROM BankTransaction t
                         WHERE t.txnDate = :date AND t.branch = :branch
                         ORDER BY t.reference
-                        """)                                // stable order: required for restart
+                        """)                                // stable order: paging and restart depend on it
                 .parameterValues(Map.of(
                         "date", LocalDate.parse(businessDate),
                         "branch", branch))
@@ -89,7 +73,7 @@ public class ReconciliationJobConfig {
     public JpaItemWriter<ReconciliationResult> writer(EntityManagerFactory entityManagerFactory) {
         return new JpaItemWriterBuilder<ReconciliationResult>()
                 .entityManagerFactory(entityManagerFactory)
-                .build();                                   // merge(): a rerun overwrites, never duplicates
+                .build();                                   // merge(): a rerun overwrites existing results
     }
 
     @Bean
@@ -105,17 +89,15 @@ public class ReconciliationJobConfig {
                 .processor(processor)
                 .writer(writer)
                 .faultTolerant()
-                .retry(TransientDataAccessException.class) // temporary DB errors: try again
+                .retry(TransientDataAccessException.class)
                 .retryLimit(3)
-                .skip(InvalidTransactionException.class)   // bad data: log it and move on
-                .skipLimit(10)                             // more than 10 bad rows: fail the step
+                .skip(InvalidTransactionException.class)
+                .skipLimit(10)
                 .listener(skipListener)
                 .build();
     }
 
-    // ---------------------------------------------------------------- partitioning
-
-    /** One partition per bank branch: {branch-NORTH -> {branch=NORTH}, ...}. */
+    /** One partition per branch: "branch-NORTH" -> {branch=NORTH}. */
     @Bean
     public Partitioner branchPartitioner(BankTransactionRepository transactionRepository) {
         return gridSize -> {
@@ -130,9 +112,8 @@ public class ReconciliationJobConfig {
     }
 
     /**
-     * Fixed-size pool for the partitions. Keep it smaller than the database connection pool.
-     * defaultCandidate = false: used only where asked for by name, so it does not replace
-     * Spring Boot's own task executor.
+     * Fixed-size pool for the partitions; keep it below the DB connection pool size.
+     * Not a default candidate, so it does not replace Spring Boot's auto-configured executor.
      */
     @Bean(defaultCandidate = false)
     public ThreadPoolTaskExecutor partitionTaskExecutor(@Value("${batch.partition-threads}") int threads) {
@@ -143,7 +124,6 @@ public class ReconciliationJobConfig {
         return executor;
     }
 
-    /** Processes no data itself: hands out partitions and waits for all of them. */
     @Bean
     public Step reconcileManagerStep(JobRepository jobRepository,
                                      Partitioner branchPartitioner,
@@ -155,8 +135,6 @@ public class ReconciliationJobConfig {
                 .taskExecutor(partitionTaskExecutor)
                 .build();
     }
-
-    // ---------------------------------------------------------------- step 2: summary
 
     @Bean
     public Step summaryStep(JobRepository jobRepository,

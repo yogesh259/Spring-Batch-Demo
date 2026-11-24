@@ -17,10 +17,8 @@ import java.time.LocalDate;
 import java.util.Map;
 
 /**
- * Run the job by hand instead of waiting for 01:30:
- *   curl -X POST "http://localhost:8080/jobs/reconcile?businessDate=2026-11-24"
- *
- * The default JobLauncher is synchronous: the request returns when the job has finished.
+ * Manual trigger, e.g. to rerun a failed date. The default JobLauncher is synchronous,
+ * so the response is sent when the job has finished.
  */
 @RestController
 @RequestMapping("/jobs")

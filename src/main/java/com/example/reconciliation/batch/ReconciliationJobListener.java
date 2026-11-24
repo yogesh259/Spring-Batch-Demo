@@ -7,7 +7,7 @@ import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobExecutionListener;
 import org.springframework.stereotype.Component;
 
-/** afterJob() runs whether the job succeeded or failed: the right place for alerts. */
+/** Logs each run's outcome. afterJob() runs on success and failure, so alerting belongs here. */
 @Component
 public class ReconciliationJobListener implements JobExecutionListener {
 
@@ -22,7 +22,6 @@ public class ReconciliationJobListener implements JobExecutionListener {
     public void afterJob(JobExecution jobExecution) {
         log.info("Reconciliation finished: {}", jobExecution.getStatus());
         if (jobExecution.getStatus() == BatchStatus.FAILED) {
-            // In real life: alert the on-call team (email, Slack, PagerDuty)
             log.error("Failures: {}", jobExecution.getAllFailureExceptions());
         }
     }

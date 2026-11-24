@@ -7,10 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.SkipListener;
 import org.springframework.stereotype.Component;
 
-/**
- * A skipped record must not just vanish: someone has to investigate it.
- * In a real system, write it to an error table instead of the log.
- */
+/** Records every skipped transaction so it can be investigated. */
 @Component
 public class ReconciliationSkipListener implements SkipListener<BankTransaction, ReconciliationResult> {
 

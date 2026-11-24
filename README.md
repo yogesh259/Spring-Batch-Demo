@@ -1,6 +1,6 @@
 # Spring Batch: Nightly Bank Reconciliation
 
-Companion code for the Medium article **[add article link here]**.
+Companion code for the Medium article [Spring Batch Tutorial: Build a Production-Ready Batch Job with Spring Boot 3](https://medium.com/@ytprajapati058/spring-batch-tutorial-build-a-production-ready-batch-job-with-spring-boot-3-f6c6408ba34d).
 
 Every night, a bank's statement lists the transactions that actually went through. Our own system keeps a ledger of what we *think* happened. This job compares the two and records, for each transaction, one of three outcomes:
 
@@ -26,6 +26,21 @@ reconciliationJob   (job parameter: businessDate)
  |
  +-- ReconciliationJobListener           logs the result, the place for alerts
 ```
+
+## Coming from the article
+
+The code follows the article step by step. A few things differ from the snippets there:
+
+| Article | This repo | Why |
+| --- | --- | --- |
+| `TransactionBatchApplication` | `ReconciliationApplication` | Named after the job. |
+| `System.out.println` | SLF4J logger | Normal logging. |
+| `chunk(1000)`, `pageSize(1000)` | `batch.chunk-size=3` | With 7 sample rows, 3 lets you watch several chunks. Use ~1000 for real volumes. |
+| Reader filters by branch | Reader filters by branch **and** `businessDate` | Each night reconciles only its own date. |
+| `SimpleAsyncTaskExecutor` | Fixed-size `ThreadPoolTaskExecutor` | The production advice from the article, applied. |
+| Cron and zone in `@Scheduled` | In `application.properties` | Change the schedule without recompiling. |
+| In-memory H2 | File-based H2 (`./data/recon`) | Job metadata survives a restart, so [Try a restart](#try-a-restart) works. |
+| — | `POST /jobs/reconcile` | Launch the job without waiting for 01:30. |
 
 ## Run it locally (H2)
 

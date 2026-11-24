@@ -1,6 +1,6 @@
 package com.example.reconciliation.batch;
 
-/** Thrown for a bad record. The step is configured to skip it, not fail. */
+/** A bank transaction that cannot be reconciled. Skipped by the reconcile step. */
 public class InvalidTransactionException extends RuntimeException {
 
     public InvalidTransactionException(String message) {

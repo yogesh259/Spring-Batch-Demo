@@ -9,7 +9,7 @@ import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.stereotype.Component;
 
-/** One action, not "read many, write many": count the results by status. */
+/** Logs the number of results per status. */
 @Component
 public class SummaryTasklet implements Tasklet {
 

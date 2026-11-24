@@ -14,9 +14,8 @@ import static com.example.reconciliation.domain.ReconciliationResult.MATCHED;
 import static com.example.reconciliation.domain.ReconciliationResult.MISSING_IN_LEDGER;
 
 /**
- * The business logic: compare one bank transaction with our ledger.
- * Knows nothing about chunks, transactions or restarts, so it is easy to unit-test.
- * It must stay free of side effects: on a retry it can run more than once per item.
+ * Compares one bank transaction with the ledger.
+ * Must stay free of side effects: on a retry it can run more than once for the same item.
  */
 @Component
 public class ReconciliationProcessor implements ItemProcessor<BankTransaction, ReconciliationResult> {
@@ -40,7 +39,7 @@ public class ReconciliationProcessor implements ItemProcessor<BankTransaction, R
         String status;
         if (ledgerAmount == null) {
             status = MISSING_IN_LEDGER;
-        } else if (ledgerAmount.compareTo(txn.getAmount()) == 0) {   // compareTo, not equals: 250.0 == 250.00
+        } else if (ledgerAmount.compareTo(txn.getAmount()) == 0) {   // compareTo ignores scale: 250.0 equals 250.00
             status = MATCHED;
         } else {
             status = AMOUNT_MISMATCH;
