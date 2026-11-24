@@ -1,0 +1,7 @@
+package com.example.reconciliation.repository;
+
+import com.example.reconciliation.domain.LedgerEntry;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, String> {
+}
