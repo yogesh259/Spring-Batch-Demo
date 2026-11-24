@@ -14,7 +14,7 @@
     <groupId>com.example</groupId>
     <artifactId>reconciliation</artifactId>
     <version>1.0.0</version>
-    <name>spring-batch-reconciliation</name>
+    <name>spring-batch-demo</name>
     <description>Nightly bank reconciliation with Spring Batch</description>
 
     <properties>

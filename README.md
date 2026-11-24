@@ -55,8 +55,13 @@ Look at the data in the H2 console at http://localhost:8080/h2-console (JDBC URL
 
 ```sql
 SELECT * FROM reconciliation_results;
-SELECT * FROM BATCH_STEP_EXECUTION;   -- one row per partition, with read/write/skip counts
+SELECT STEP_NAME, STATUS, READ_COUNT, WRITE_COUNT, PROCESS_SKIP_COUNT FROM BATCH_STEP_EXECUTION;   -- one row per partition
+SELECT * FROM BATCH_JOB_EXECUTION;
 ```
+
+After one run, the H2 console shows the reconciliation results (TXN-007 is absent because it was skipped), one step execution per branch partition (EAST read 3 rows, wrote 2 and skipped 1), and the completed job execution:
+
+![Query results in the H2 console](docs/images/h2-console-results.png)
 
 Run the same request again and you get `409 Conflict`: 24 November is already reconciled.
 
